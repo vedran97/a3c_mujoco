@@ -1,0 +1,53 @@
+<mujoco model="A3C">
+    <compiler angle="radian" meshdir="./meshes/" />
+    <size njmax="500" nconmax="100" />
+    <asset>
+        <mesh name="l0" file="l0.stl" />
+        <mesh name="l1" file="l1.stl" />
+        <mesh name="l2" file="l2.stl" />
+        <mesh name="l3" file="l3.stl" />
+        <mesh name="l4" file="l4.stl" />
+        <mesh name="l5" file="l5.stl" />
+        <mesh name="l6" file="l6.stl" />
+    </asset>
+    <worldbody>
+        <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.4 0.4 0.4 1" mesh="l0" />
+        <geom type="mesh" rgba="0.4 0.4 0.4 1" mesh="l0" />
+        <body name="link_1" pos="0 0 0.1915">
+            <inertial pos="4.63e-06 0.04597 0" quat="0.923879 -0.382683 0.000602333 0.000710527" mass="5.1" diaginertia="0.0304986 0.0295658 0.0077381" />
+            <joint name="joint_1" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="4.7" frictionloss="26.6" />
+            <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.96 0.76 0.13 1" mesh="l1" />
+            <geom type="mesh" rgba="0.96 0.76 0.13 1" mesh="l1" />
+            <body name="link_2" pos="0 0.141 0" quat="0.500398 -0.5 -0.5 -0.499602">
+                <inertial pos="0.1104 0 0.01661" quat="0 0.70597 0 0.708241" mass="1.36" diaginertia="0.0141011 0.013069 0.00165851" />
+                <joint name="joint_2" pos="0 0 0" axis="0 0 1" limited="true" range="-2.61 2.61" damping="4.7" frictionloss="26.6" />
+                <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.4 0.4 0.4 1" mesh="l2" />
+                <geom type="mesh" rgba="0.4 0.4 0.4 1" mesh="l2" />
+                <body name="link_3" pos="0.23 0 -0.1415">
+                    <inertial pos="7.798e-05 -0.03574 0" quat="0.932734 -0.36056 -0.00155077 -0.000755232" mass="3.319" diaginertia="0.0179211 0.0169925 0.00442541" />
+                    <joint name="joint_3" pos="0 0 0" axis="0 0 1" limited="true" range="-2.61 2.61" damping="1.31" frictionloss="13.8" />
+                    <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.96 0.76 0.13 1" mesh="l3" />
+                    <geom type="mesh" rgba="0.96 0.76 0.13 1" mesh="l3" />
+                    <body name="link_4" pos="0.23 0 0" quat="0.500398 0.5 0.499602 0.5">
+                        <inertial pos="-1.76e-05 -0.005787 -0.04962" quat="0.704869 -0.0661126 0.0637742 0.703364" mass="0.508" diaginertia="0.00117056 0.0010416 0.000466494" />
+                        <joint name="joint_4" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="1.01" frictionloss="7" />
+                        <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.4 0.4 0.4 1" mesh="l4" />
+                        <geom type="mesh" rgba="0.4 0.4 0.4 1" mesh="l4" />
+                        <body name="link_5" pos="0 0.1635 0" quat="0.707388 -0.706825 0 0">
+                            <inertial pos="1.27e-05 -0.04124 0" quat="0.923911 0.382603 -0.000549754 -0.00163355" mass="2.49617" diaginertia="0.0121541 0.0113905 0.00285445" />
+                            <joint name="joint_5" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="1.01" frictionloss="7" />
+                            <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.96 0.76 0.13 1" mesh="l5" />
+                            <geom type="mesh" rgba="0.96 0.76 0.13 1" mesh="l5" />
+                            <body name="link_6" pos="0 -0.166 0" quat="0.500398 0.5 -0.5 0.499602">
+                                <inertial pos="0.000214 -0.00406 0.02902" quat="0.474344 0.526452 -0.520489 0.47638" mass="0.5" diaginertia="0.000520089 0.000352794 0.000339851" />
+                                <joint name="joint_6" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="1.01" frictionloss="7" />
+                                <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.15 0.15 0.15 1" mesh="l6" />
+                                <geom type="mesh" rgba="0.15 0.15 0.15 1" mesh="l6" />
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>
