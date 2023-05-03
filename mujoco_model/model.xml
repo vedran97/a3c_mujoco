@@ -9,8 +9,14 @@
         <mesh name="l4" file="l4.stl" />
         <mesh name="l5" file="l5.stl" />
         <mesh name="l6" file="l6.stl" />
+        <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3"
+        rgb2=".2 .3 .4" width="300" height="300" mark="none"/>
+        <material name="grid" texture="grid" texrepeat="1 1"
+        texuniform="true" reflectance=".2"/>
     </asset>
     <worldbody>
+        <light name="top" pos="0 0 3"/>
+        <geom name="floor" type="plane" pos="0 0 0" size="2 2 .1" material="grid"/>
         <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.4 0.4 0.4 1" mesh="l0" />
         <geom type="mesh" rgba="0.4 0.4 0.4 1" mesh="l0" />
         <body name="link_1" pos="0 0 0.1915">
