@@ -5,7 +5,9 @@
 
 ## Additional Dependencies:
 pip install mujoco (plain mujoco install not mujoco-py)
+
 https://github.com/rohanpsingh/mujoco-python-viewer
+
 pip install mujoco-python-viewer
 
 
