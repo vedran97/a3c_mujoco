@@ -230,7 +230,7 @@ def generateTrajAndPlot(T,J):
 
 ## Return Initial Joint Angles, and a Target joint angles for a circle
 def getTrajAndInitJointAngles():
-    q_init = np.array([-2.11696,-0.370079,-1.3761,-0.000627978,-1.3936,-2.11535])
+    q_init = [-2.11696,-0.370079,-1.3761,-0.000627978,-1.3936,-2.11535]
     return q_init,np.load("jointTrajectories.npy")
 
 ## Return a transformation matrix as a simpy object and the symbols used in it
