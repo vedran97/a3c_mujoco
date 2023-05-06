@@ -57,6 +57,7 @@ def reset_sim():
     sim.data.qpos[joint_ids] = initial_joint_angles
     return np.concatenate((sim.data.qpos[joint_ids], sim.data.qvel[joint_ids]))
 
+rewards = []
 def simOnce():
     reset_sim()
     viewer.render()
@@ -78,7 +79,7 @@ def simOnce():
         # print("Control effort:", control_effort)
         # print('timestep:',sim.model.opt.timestep)
         sim.data.ctrl[joint_ids] = control_effort
-        calculateReward(target_angles,joint_positions)
+        rewards.append(calculateReward(target_angles,joint_positions))
         sim.step()
 
     fig,ax = plt.subplots(2,3)
@@ -94,3 +95,8 @@ def simOnce():
     plt.show()
 
 simOnce()
+
+
+np.save('./benchmarks/benchmark_reward.npy',np.array(rewards))
+for idx,ctrl in enumerate(pid_controllers):
+    np.save('./benchmarks/benchmark_rr_ctrl'+str(idx)+'.npy',np.array(ctrl.tracking_errors))
