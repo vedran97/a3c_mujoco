@@ -5,7 +5,7 @@ import numpy as np
 import math
 from controller import PIDController
 from circular_trajectory import *
-
+from reward import calculateReward
 # Load the XML model file
 model_path = os.path.join('../mujoco_model', 'model.xml')
 model = mujoco_py.load_model_from_path(model_path)
@@ -57,39 +57,40 @@ def reset_sim():
     sim.data.qpos[joint_ids] = initial_joint_angles
     return np.concatenate((sim.data.qpos[joint_ids], sim.data.qvel[joint_ids]))
 
-
-reset_sim()
-viewer.render()
-
-current_pos = []
-# Simulation loop
-for target_angles in traj:
-    # Render the current frame
+def simOnce():
+    reset_sim()
     viewer.render()
-    # Step the simulation forward by one time step
-    joint_positions = sim.data.qpos[joint_ids]
-    current_pos.append(joint_positions)
-    joint_velocities = sim.data.qvel[joint_ids]
-    end_effector_pos = sim.data.body_xpos[ee_id]
-    end_effector_orient = sim.data.body_xquat[ee_id]
+
+    current_pos = []
+    # Simulation loop
+    for target_angles in traj:
+        # Render the current frame
+        viewer.render()
+        # Step the simulation forward by one time step
+        joint_positions = sim.data.qpos[joint_ids]
+        current_pos.append(joint_positions)
+        joint_velocities = sim.data.qvel[joint_ids]
+        end_effector_pos = sim.data.body_xpos[ee_id]
+        end_effector_orient = sim.data.body_xquat[ee_id]
 
 
-    control_effort = [pid.compute(curr,target,sim.model.opt.timestep) for curr,target,pid in zip(joint_positions,target_angles,pid_controllers)]
-    # print("Control effort:", control_effort)
-    # print('timestep:',sim.model.opt.timestep)
-    sim.data.ctrl[joint_ids] = control_effort
-    
-    sim.step()
+        control_effort = [pid.compute(curr,target,sim.model.opt.timestep) for curr,target,pid in zip(joint_positions,target_angles,pid_controllers)]
+        # print("Control effort:", control_effort)
+        # print('timestep:',sim.model.opt.timestep)
+        sim.data.ctrl[joint_ids] = control_effort
+        calculateReward(target_angles,joint_positions)
+        sim.step()
 
-fig,ax = plt.subplots(2,3)
-current_pos = np.array(current_pos)
-for i in range(2):
-    for j in range(3):
-        ax[i][j].plot(current_pos[:,i*3+j])
-        ax[i][j].plot(traj[:,i*3+j])
-        ax[i][j].plot(pid_controllers[i*3+j].tracking_errors)
-        ax[i][j].set_title(f'joint {i*3+j +1}')
-        ax[i][j].legend(['current_pos','target','error'])
-        ax[i][j].grid()
-plt.show()
+    fig,ax = plt.subplots(2,3)
+    current_pos = np.array(current_pos)
+    for i in range(2):
+        for j in range(3):
+            ax[i][j].plot(current_pos[:,i*3+j])
+            ax[i][j].plot(traj[:,i*3+j])
+            ax[i][j].plot(pid_controllers[i*3+j].tracking_errors)
+            ax[i][j].set_title(f'joint {i*3+j +1}')
+            ax[i][j].legend(['current_pos','target','error'])
+            ax[i][j].grid()
+    plt.show()
 
+simOnce()
