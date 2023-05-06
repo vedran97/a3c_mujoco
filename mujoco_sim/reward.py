@@ -16,6 +16,6 @@ def calculateReward(targetThetas,currentAngles):
     currentEEFPos = currentEEF[:3,3]
     currentEEFPos = np.array(currentEEFPos).astype(np.float64)
 
-    reward = -1*np.sqrt(np.sum(((currentEEFPos-posEE))**2))
+    reward = -1*np.linalg.norm(currentEEFPos-posEE)
     print('Reward:', reward)
     return reward
