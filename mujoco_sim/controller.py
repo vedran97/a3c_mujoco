@@ -8,7 +8,7 @@ class PIDController:
         self.tracking_errors = []
         self.current_error = 0
         self.alpha = 0.01
-        self.windup_guard = 200
+        self.windup_guard = 500
         
     def compute(self, current_value,target, dt):
         error = target - current_value

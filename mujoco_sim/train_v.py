@@ -5,7 +5,7 @@ from tqdm import tqdm
 state_size = 2700
 action_size = 3
 agents = []
-alphas = [0.01,0.01,0.01,0.01,0.01,0.01]*1000
+alphas = [0.01,0.01,0.01,0.01,0.01,0.01]*10000
 best_errors = [1e1000,1e1000,1e1000,1e1000,1e1000,1e1000]
 controller_range = 6
 episodes = 100000
@@ -23,26 +23,29 @@ for ctrl,alpha in zip(pid_controllers,alphas):
     ctrl.set_alpha(alpha)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dones = [False for i in range(controller_range)]
 ## train   
+states = [np.zeros(state_size),np.zeros(state_size),np.zeros(state_size),np.zeros(state_size),np.zeros(state_size),np.zeros(state_size)]
 for episode in tqdm(range(episodes)):
     ## reset controllers:
     for controller in pid_controllers:
         controller.reset_controller()
     ## reset sim
-    dones = [False for i in range(controller_range)]
-    state = np.zeros(state_size)
-    state = np.reshape(state, [1, state_size])
-    state_tensor = torch.tensor(state).to(torch.float32).to(device=device)
     actions = []
     ## Get Actions
     for idx,agent in enumerate(agents):
+        state = np.reshape(states[idx], [1, state_size])
+        state_tensor = torch.tensor(state).to(torch.float32).to(device=device)
         actions.append(agents[idx].get_action(state_tensor))
     ## Update PID gains for joints
     for idx,action in enumerate(actions):
+        print("Joint : ",idx+1)
+        print("action : ",action)
         delta_kp = pid_controllers[idx].alpha * action[0]
         delta_ki = pid_controllers[idx].alpha * action[1]
         delta_kd = pid_controllers[idx].alpha *0.01* action[2]
-        pid_controllers[idx].update_gains(delta_kp,delta_ki,delta_kd)
+        if not dones[idx]:
+            pid_controllers[idx].update_gains(delta_kp,delta_ki,delta_kd)
     ## Simulate once
     current_pos = simOnce(render=False,plot=False,pid_controllers=pid_controllers)
     ## Collect rewards for each controller which is tuned
@@ -67,7 +70,10 @@ for episode in tqdm(range(episodes)):
         reward = next_state_itr[1]
         done = next_state_itr[2]
         agent.train_model(state_tensor, action, reward, next_state_tensor, done)
+    ## Update state
+    for idx,next_state_itr in enumerate(next_states):
+        states[idx] = next_state_itr[0]
     for idx,done in enumerate(dones):
         if done:
-            print('Done for joint:{}'.format(idx))
+            print('Done for joint:{}'.format(idx+1))
             print('P:{},I:{},D:{}'.format(pid_controllers[idx].Kp,pid_controllers[idx].Ki,pid_controllers[idx].Kd))

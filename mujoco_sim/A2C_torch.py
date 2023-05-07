@@ -46,12 +46,12 @@ class A2CPIDTuner:
         self.value_size = 1
         self.grad_bound = 0
         
-        self.std_bound = [10, 50]
+        self.std_bound = [0.01, 1]
 
 
-        self.discount_factor = 0.99
+        self.discount_factor = 0.95
         self.actor_lr = 0.001
-        self.critic_lr = 0.005
+        self.critic_lr = 0.001
 
         self.actor = Actor(state_size, action_size,actor_hidden_size=500).to(self.device)
         self.critic = Critic(state_size,critic_hidden_size=500).to(self.device)
