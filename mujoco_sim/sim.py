@@ -69,7 +69,7 @@ def step(gain):
     # Determine motor torque based on gains and error between target and current position
     control_effort = [pid.compute(curr,target,sim.model.opt.timestep) for curr,target,pid in zip(joint_positions,target_angles,pid_controllers)]
     sim.data.ctrl[joint_ids] = control_effort
-    reward = sum([math.abs(controller.get_error()) for controller in pid_controllers])*-1
+    reward = sum([math.abs(controller.get_prev_error()) for controller in pid_controllers])*-1
     done = reward > -0.05
     sim.step()
     return np.concatenate((sim.data.qpos[joint_ids], sim.data.qvel[joint_ids])), reward, done
