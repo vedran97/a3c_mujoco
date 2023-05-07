@@ -1,14 +1,14 @@
 from sim_v import *
 from A2C_torch import *
 from tqdm import tqdm
-
-state_size = 2700
+init,traj = getTrajAndInitJointAngles()
+state_size = traj.shape[0]+200
 action_size = 3
 agents = []
-alphas = [0.01,0.01,0.01,0.01,0.01,0.01]*10000
+alphas = [0.01,0.01,0.01,0.01,0.01,0.01]*1000
 best_errors = [1e1000,1e1000,1e1000,1e1000,1e1000,1e1000]
 controller_range = 6
-episodes = 100000
+episodes = 1000000
 settling = [0,0,0,0,0,0]
 
 INIT_GAINS = [[200,0,10],[800,0,100],[400,0,70],[200,0,30],[80,10,30],[50,0,10]]
@@ -39,8 +39,8 @@ for episode in tqdm(range(episodes)):
         actions.append(agents[idx].get_action(state_tensor))
     ## Update PID gains for joints
     for idx,action in enumerate(actions):
-        print("Joint : ",idx+1)
-        print("action : ",action)
+        # print("Joint : ",idx+1)
+        # print("action : ",action)
         delta_kp = pid_controllers[idx].alpha * action[0]
         delta_ki = pid_controllers[idx].alpha * action[1]
         delta_kd = pid_controllers[idx].alpha *0.01* action[2]
@@ -53,7 +53,7 @@ for episode in tqdm(range(episodes)):
     for idx,action in enumerate(actions):
         error_sum = np.sum(np.abs(np.array(pid_controllers[idx].tracking_errors, dtype=np.float32)))
         reward = -error_sum
-        if error_sum < 0.01 * (state_size -1):
+        if error_sum < 0.005 * (state_size -1):
             reward = 10
             dones[idx] = True
         if error_sum < best_errors[idx]:
@@ -61,7 +61,8 @@ for episode in tqdm(range(episodes)):
         ## next state is current points used for that joint,in the simulator:
         next_state = np.array(current_pos)[:,idx]
         next_states.append([next_state, reward, dones[idx], error_sum])
-        print("error sum:{} , Joint:{}".format(error_sum,idx+1))
+        if episode%10 == 0 :
+            print("error sum:{} , Joint:{}".format(error_sum,idx+1))
     ## Train each agent
     for next_state_itr,agent,action in zip(next_states,agents,actions):
         next_state = next_state_itr[0]
@@ -77,3 +78,11 @@ for episode in tqdm(range(episodes)):
         if done:
             print('Done for joint:{}'.format(idx+1))
             print('P:{},I:{},D:{}'.format(pid_controllers[idx].Kp,pid_controllers[idx].Ki,pid_controllers[idx].Kd))
+    if (episode+1)%50 == 0 :
+        for idx,controllers in enumerate(pid_controllers):
+            print("Joint:{}".format(idx+1))
+            print("P:{},I:{},D:{}".format(controllers.Kp,controllers.Ki,controllers.Kd))
+    if episode == episodes-1:
+        for idx,controllers in enumerate(pid_controllers):
+            print("Joint:{}".format(idx+1))
+            print("P:{},I:{},D:{}".format(controllers.Kp,controllers.Ki,controllers.Kd))
