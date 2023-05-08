@@ -73,7 +73,7 @@ def simOnce(render=False,plot=False,pid_controllers=None):
         # print("Control effort:", control_effort)
         # print('timestep:',sim.model.opt.timestep)
         sim.data.ctrl[joint_ids] = control_effort
-        rewards.append(calculateReward(target_angles,joint_positions))
+        # rewards.append(calculateReward(target_angles,joint_positions))
         sim.step()
 
     if plot:

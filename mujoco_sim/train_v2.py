@@ -53,6 +53,8 @@ class PIDENV:
         self.controller = controller
         self.done = False
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.observation_space = self.reset()
+        self.action_space = np.array([0,0,0])
     def step(self,action,epoch):
         self.controller.reset_controller()
         for controller in pid_controllers:
@@ -152,4 +154,4 @@ def compute_returns(next_value, rewards, masks, gamma=0.99):
         returns.insert(0, R)
     return returns
 
-a2c(10000)
+a2c(episodes)
