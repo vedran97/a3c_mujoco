@@ -6,7 +6,7 @@ from controller import PIDController
 import mujoco_py
 from circular_trajectory import *
 
-num_episodes = 10000
+num_episodes = 500
 # HYPERPARAMETERS BELOW
 gamma = 0.75  # discount factor for rewards
 learningRate = 2e-4  # learning rate for actor and critic networks
@@ -25,6 +25,11 @@ envName = "mujoco_a3c"
 zero_epsilon = 1e-6
 ## initialize PID controllers
 INIT_GAINS = [[200,0+zero_epsilon,10],[800,0+zero_epsilon,100],[400,0+zero_epsilon,70],[200,0+zero_epsilon,30],[80,10,30],[50,0+zero_epsilon,10]]
+## effort clamp for J1 = 20
+## Best learnt gains for J1 = 4859.5810546875,1.00020770332776e-06,8.67470932006836 ## Initial = 200,0+zero_epsilon,10
+## Best learnt gains for J2 = ## Initial = 800,0+zero_epsilon,100
+## J1 reward chosen to exit the RL = 0.29
+J_REWARD_CUTOFF = 0.29
 pid_controllers = [PIDController(kp, ki, kd) for (kp,ki,kd) in INIT_GAINS]
 
 class PIDMujocoEnv:
@@ -92,6 +97,7 @@ class PIDMujocoEnv:
     def init_actor(self,actor:Actor):
         gains = [self.controller.Kp, self.controller.Ki, self.controller.Kd]
         actor.init_weights(gains)
+        return actor
     def call_render(self):
         if self.render:
             self.viewer.render()
@@ -106,7 +112,7 @@ class PIDMujocoEnv:
         self.done = False
         return np.zeros(state_size)
     
-    def step(self,state,agent:Agent):
+    def step(self,state,agent:Agent,gains_bench,r_bench,eval=False):
         if self.render:
             self.viewer.render()
         ## target angle , set of 6 target angles
@@ -126,10 +132,30 @@ class PIDMujocoEnv:
         if self.traj_index != 0:
             control_effort[self.idx] = action
         ## Clamp control effort
-        control_effort = [max(-25, c) if c < 0 else min(25, c) for c in control_effort]
+        effort_clamp = 30
+        if control_effort[self.idx] < -effort_clamp:
+            control_effort[self.idx] = -effort_clamp
+        elif control_effort[self.idx] > effort_clamp:
+            control_effort[self.idx] = effort_clamp
+
+        if control_effort[self.idx] == -effort_clamp or control_effort[self.idx] == effort_clamp:
+            control_was_clamped = True
+        else:
+            control_was_clamped = False
+        
         self.sim.data.ctrl[self.joint_ids] = control_effort
         ## Apply step
         self.sim.step()
+        ## Find RR 
+        # rr = np.sum(np.array(self.controller.tracking_errors)**2)
+        ## Apply supervisor logic
+        # if(rr>1.5*r_bench) and eval==False:
+        #     ## RESET PID CONTROLLER, RESET actor weight
+        #     print("\r\nSUPERVISOR ACTION\r\n")
+        #     p_bench,i_bench,d_bench = gains_bench
+        #     self.controller.set_gains(p_bench,i_bench,d_bench)
+        #     pid_controllers[self.idx] =self.controller
+        #     agent.actor = self.init_actor(agent.actor)
         ## Get specific controller's next state
         ## Get current angles for the joint of concern
         current_angle = self.sim.data.qpos[self.joint_ids][self.idx]
@@ -139,6 +165,10 @@ class PIDMujocoEnv:
         # print("error:",self.controller.current_error**2)
         # print("effort:",control_effort[self.idx]**2)
         reward = -1*(((self.controller.current_error)**2)+1e-6*(control_effort[self.idx]**2))
+        if control_was_clamped: ## we dont want control saturation!!
+            print("control was clamped")
+            reward -= 100
+            print('reward:',reward)
         # print("reward:",reward)
         ## Increment trajectory index
         self.traj_index+=1
@@ -176,10 +206,10 @@ class PIDMujocoEnv:
             # store control effort for this simulation_step
             control_efforts.append(control_effort)
 
-
+ctrl_indx = 0
 def train(num_episodes=2):
-    for trial in range(2):
-        env = PIDMujocoEnv(pid_controllers[0],0,render=render)
+    for trial in range(5):
+        env = PIDMujocoEnv(pid_controllers[ctrl_indx],ctrl_indx,render=render)
         env.name = envName + "_" + str(trial)
         csvName = env.name + "-data.csv"
         agent = Agent(env, learningRate, gamma, tau)
@@ -188,7 +218,12 @@ def train(num_episodes=2):
         state = env.reset()
         step = 0
         runningReward = None
-        
+        ## for supervisor, we need to first calculate a benchmark reward for each operation step
+        env.runTrajectoryOnce(agent)
+        gains_bench = INIT_GAINS[env.idx]
+        r_bench = np.sum(np.array(env.controller.tracking_errors)**2)
+        print("r_bench:",r_bench)
+        env.reset()
         # determine the last episode if we have saved training in progress
         numEpisode = 0
         if path.exists(csvName):
@@ -200,7 +235,7 @@ def train(num_episodes=2):
             # # choose an action from the agent's policy
             action = agent.getNoiseAction(state)
             # take a step in the environment and collect information
-            nextState, reward, done, _ = env.step(state,agent)   ## literally take 1 step in the sim space.
+            nextState, reward, done, _ = env.step(state,agent,gains_bench,r_bench,True)   ## literally take 1 step in the sim space.
             # store data in buffer
             agent.buffer.store(state, action, reward, nextState, done)
 
@@ -212,7 +247,7 @@ def train(num_episodes=2):
                 done = False
                 while not done:
                     action = agent.getDetAction(state)
-                    nextState, reward, done, info = env.step(state,agent)
+                    nextState, reward, done, info = env.step(state,agent,gains_bench,r_bench,True)
                     if render:
                         env.call_render()
                     state = nextState
@@ -239,6 +274,8 @@ def train(num_episodes=2):
                     flush=True,
                 )
                 print('Gains:{},{},{}'.format(kp_learned,ki_learned,kd_learned))
+                if(np.abs(sumRewards)<J_REWARD_CUTOFF):
+                    break
             else:
                 state = nextState
             step += 1
