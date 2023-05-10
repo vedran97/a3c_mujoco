@@ -1,8 +1,11 @@
 from sim_v import *
 from A2C_torch import *
 from tqdm import tqdm
+
+import time
 init,traj = getTrajAndInitJointAngles()
 state_size = traj.shape[0]+200
+state_size = 2700
 action_size = 3
 agents = []
 alphas = [0.01,0.01,0.01,0.01,0.01,0.01]*1000
@@ -47,7 +50,9 @@ for episode in tqdm(range(episodes)):
         if not dones[idx]:
             pid_controllers[idx].update_gains(delta_kp,delta_ki,delta_kd)
     ## Simulate once
+    t = time.time()
     current_pos = simOnce(render=False,plot=False,pid_controllers=pid_controllers)
+    print('SIM TIME:', time.time()-t)
     ## Collect rewards for each controller which is tuned
     next_states = []
     for idx,action in enumerate(actions):
@@ -64,6 +69,7 @@ for episode in tqdm(range(episodes)):
         if episode%10 == 0 :
             print("error sum:{} , Joint:{}".format(error_sum,idx+1))
     ## Train each agent
+    t = time.time()
     for next_state_itr,agent,action in zip(next_states,agents,actions):
         next_state = next_state_itr[0]
         next_state = np.reshape(next_state, [1, state_size])
@@ -71,6 +77,7 @@ for episode in tqdm(range(episodes)):
         reward = next_state_itr[1]
         done = next_state_itr[2]
         agent.train_model(state_tensor, action, reward, next_state_tensor, done)
+    print('\nTRAIN TIME:', time.time()-t)
     ## Update state
     for idx,next_state_itr in enumerate(next_states):
         states[idx] = next_state_itr[0]
