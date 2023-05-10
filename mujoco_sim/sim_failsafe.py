@@ -2,10 +2,9 @@ import mujoco_py
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 from controller import PIDController
-from circular_trajectory import *
-from reward import calculateReward
+from circular_trajectory import getTrajAndInitJointAngles
+#L
 # Load the XML model file
 model_path = os.path.join('../mujoco_model', 'model.xml')
 model = mujoco_py.load_model_from_path(model_path)
@@ -72,7 +71,7 @@ def simOnce(render=False,plot=False,pid_controllers=None):
         end_effector_pos = sim.data.body_xpos[ee_id]
         end_effector_orient = sim.data.body_xquat[ee_id]
         for i in sim.data.qvel[joint_ids]:
-            if abs(i) > 10:
+            if abs(i) > 30:
                 fail = True
                 sim.data.qvel[joint_ids] = [0]*6
                 sim.data.qpos[joint_ids] = target_angles
