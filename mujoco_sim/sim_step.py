@@ -30,6 +30,8 @@ INIT_GAINS = [[200,0+zero_epsilon,10],[800,0+zero_epsilon,100],[400,0+zero_epsil
 ## Best learnt gains for J2 = ## Initial = 800,0+zero_epsilon,100
 ## J1 reward chosen to exit the RL = 0.29
 J_REWARD_CUTOFF = 0.29
+J1_EFFORT_CLAMP = 30
+J2_EFFORT_CLAMP = 70
 pid_controllers = [PIDController(kp, ki, kd) for (kp,ki,kd) in INIT_GAINS]
 
 class PIDMujocoEnv:
@@ -132,10 +134,12 @@ class PIDMujocoEnv:
         if self.traj_index != 0:
             control_effort[self.idx] = action
         ## Clamp control effort
-        effort_clamp = 30
+        effort_clamp = 70
         if control_effort[self.idx] < -effort_clamp:
+            print("clamped effort",control_effort[self.idx])
             control_effort[self.idx] = -effort_clamp
         elif control_effort[self.idx] > effort_clamp:
+            print("clamped effort",control_effort[self.idx])
             control_effort[self.idx] = effort_clamp
 
         if control_effort[self.idx] == -effort_clamp or control_effort[self.idx] == effort_clamp:
@@ -206,7 +210,7 @@ class PIDMujocoEnv:
             # store control effort for this simulation_step
             control_efforts.append(control_effort)
 
-ctrl_indx = 0
+ctrl_indx = 1
 def train(num_episodes=2):
     for trial in range(5):
         env = PIDMujocoEnv(pid_controllers[ctrl_indx],ctrl_indx,render=render)
