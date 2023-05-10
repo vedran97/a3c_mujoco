@@ -4,14 +4,8 @@ import torch
 import numpy as np
 from actor_critic_continuous import Agent
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib import style
 
-style.use('fivethirtyeight')
-
-fig = plt.figure()
-ax1 = fig.add_subplot(1,1,1)
-
+#L
 state_size = 2700*6
 action_size = 18
 scale = [1000, 1, 100]
@@ -35,7 +29,7 @@ class PIDENV:
     def step(self,action,epoch):
         for i, controller in enumerate(self.controllers):
             self.controllers[i].reset_controller()
-            self.controllers[i].set_gains(1000*action[3*i], action[3*i+1], 100*action[3*i+2])
+            self.controllers[i].set_gains(3000*action[3*i], 20*action[3*i+1], 300*action[3*i+2])
             #self.controllers[i].update_gains(delta_kp,delta_ki,delta_kd)
             pid_controllers[i] = self.controllers[i]
         current_pos, fail = simOnce(render=False,plot=False,pid_controllers=pid_controllers)
@@ -46,7 +40,7 @@ class PIDENV:
         reward = -error_sum
         if fail:
             reward -=1000
-        elif error_sum < 0.005 * (state_size -1):
+        elif error_sum < 0.001 * (state_size -1):
             reward = 10
             self.done = True
         print('\nCrashed:',fail, 'Reward',reward)
@@ -63,11 +57,11 @@ class PIDENV:
     def reset(self):
         return np.array(simOnce(render=False,plot=False,pid_controllers=initial_controllers)[0]).flatten()
 
-agent = Agent(alpha=0.00005, beta=0.0001, input_dims=state_size, gamma=0.0,
+agent = Agent(alpha=0.00001, beta=0.0001, input_dims=state_size, gamma=0,
                   layer1_size=256, layer2_size=256, n_actions=2*action_size, n_outputs=action_size)
 
 env = PIDENV(pid_controllers)
-num_episodes = 500
+num_episodes = 100000
 score_history = []
 observation = env.reset()
 score = 0
