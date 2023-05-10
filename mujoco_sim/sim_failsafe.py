@@ -36,8 +36,12 @@ joint_ids = [sim.model.joint_name2id(name) for name in joint_names]
 # print(f'joint ids:{joint_ids}')
 # initial_joint_angles, traj = getTrajAndInitJointAngles()
 
+INIT_GAINS = [[200,0,10],[800,0,100],[400,0,70],[200,0,30],[80,10,30],[50,0,10]]
+standard_pid = [PIDController(kp, ki, kd) for (kp,ki,kd) in INIT_GAINS]
 
 def simOnce(render=False,plot=False,pid_controllers=None):
+    efforts = []
+    fail = False
 
     # Get initial trajectory and joint angles
     initial_joint_angles, traj = getTrajAndInitJointAngles()
@@ -67,16 +71,35 @@ def simOnce(render=False,plot=False,pid_controllers=None):
         joint_velocities = sim.data.qvel[joint_ids]
         end_effector_pos = sim.data.body_xpos[ee_id]
         end_effector_orient = sim.data.body_xquat[ee_id]
+        for i in sim.data.qvel[joint_ids]:
+            if abs(i) > 10:
+                fail = True
+                sim.data.qvel[joint_ids] = [0]*6
+                sim.data.qpos[joint_ids] = target_angles
+                errs = [c.tracking_errors for c in pid_controllers]
+                pid_controllers = standard_pid
+                for i in range(len(pid_controllers)):
+                    pid_controllers[i].tracking_errors = errs[i]
+                break
 
+        joint_positions = sim.data.qpos[joint_ids]
+
+        
 
         control_effort = [pid.compute(curr,target,sim.model.opt.timestep) for curr,target,pid in zip(joint_positions,target_angles,pid_controllers)]
-        # print("Control effort:", control_effort)
+        if plot:
+            efforts.append(control_effort)
+        control_effort = [max(-20, c) if c < 0 else min(20, c) for c in control_effort]
         # print('timestep:',sim.model.opt.timestep)
         sim.data.ctrl[joint_ids] = control_effort
-        # rewards.append(calculateReward(target_angles,joint_positions))
+        #rewards.append(calculateReward(target_angles,joint_positions))
+        
+
+
         sim.step()
 
     if plot:
+        efforts= np.array(efforts)
         fig,ax = plt.subplots(2,3)
         current_pos = np.array(current_pos)
         for i in range(2):
@@ -84,14 +107,14 @@ def simOnce(render=False,plot=False,pid_controllers=None):
                 ax[i][j].plot(current_pos[:,i*3+j])
                 ax[i][j].plot(traj[:,i*3+j])
                 ax[i][j].plot(pid_controllers[i*3+j].tracking_errors)
+                #ax[i][j].plot(efforts[:,i*3+j])
                 ax[i][j].set_title(f'joint {i*3+j +1}')
                 ax[i][j].legend(['current_pos','target','error'])
                 ax[i][j].grid()
         plt.show()
 
-    return current_pos
+    return current_pos, fail
 
-# simOnce()
 
 
 # np.save('./benchmarks/benchmark_reward.npy',np.array(rewards))
