@@ -5,11 +5,11 @@ import csv
 from controller import PIDController
 import mujoco_py
 from circular_trajectory import *
-
+import sys
 num_episodes = 500
 # HYPERPARAMETERS BELOW
 gamma = 0.75  # discount factor for rewards
-learningRate = 2e-4  # learning rate for actor and critic networks
+learningRate = 1e-4  # learning rate for actor and critic networks ## j1, j2 = 2e-4
 tau = 0.005  # tracking parameter used to update target networks slowly
 actionSigma = 0.1  # contributes noise to deterministic policy output
 trainingSigma = 0.2  # contributes noise to target actions
@@ -24,11 +24,18 @@ action_size = 1
 envName = "mujoco_a3c"
 zero_epsilon = 1e-6
 ## initialize PID controllers
-INIT_GAINS = [[200,0+zero_epsilon,10],[800,0+zero_epsilon,100],[400,0+zero_epsilon,70],[200,0+zero_epsilon,30],[80,10,30],[50,0+zero_epsilon,10]]
+INIT_GAINS = [[4859.5810546875,1.00020770332776e-06,8.67470932006836],
+              [24239.791015625,9.863824743661098e-07,70.85529327392578],
+              [400,0+zero_epsilon,70],
+              [200,0+zero_epsilon,30],
+              [80,10,30],
+              [50,0+zero_epsilon,10]]
 ## effort clamp for J1 = 20
 ## Best learnt gains for J1 = 4859.5810546875,1.00020770332776e-06,8.67470932006836 ## Initial = 200,0+zero_epsilon,10
-## Best learnt gains for J2 = ## Initial = 800,0+zero_epsilon,100
+## Best learnt gains for J2 = 24239.791015625,9.863824743661098e-07,70.85529327392578 ## Initial = 800,0+zero_epsilon,100
+## Best learnt gains for J3 = 400,0+zero_epsilon,70 ## Initial = 400,0+zero_epsilon,70
 ## J1 reward chosen to exit the RL = 0.29
+## J2 reward chosen to exit the RL = 0.29 // exited before this because this is the best learnt reward
 J_REWARD_CUTOFF = 0.29
 J1_EFFORT_CLAMP = 30
 J2_EFFORT_CLAMP = 70
@@ -210,11 +217,12 @@ class PIDMujocoEnv:
             # store control effort for this simulation_step
             control_efforts.append(control_effort)
 
-ctrl_indx = 1
-def train(num_episodes=2):
+
+def train(num_episodes=2,ctrl_indx = 2):
     for trial in range(5):
+        pid_controllers = [PIDController(kp, ki, kd) for (kp,ki,kd) in INIT_GAINS]
         env = PIDMujocoEnv(pid_controllers[ctrl_indx],ctrl_indx,render=render)
-        env.name = envName + "_" + str(trial)
+        env.name = envName + "_" + str(trial) + "_" + str(ctrl_indx+1)
         csvName = env.name + "-data.csv"
         agent = Agent(env, learningRate, gamma, tau)
         env.init_actor(agent.actor)
@@ -286,5 +294,7 @@ def train(num_episodes=2):
             shouldUpdatePolicy = step % policyDelay == 0
             agent.update(miniBatchSize, trainingSigma, trainingClip, shouldUpdatePolicy)
 
-
-train(num_episodes)
+if __name__ == "__main__":
+    arg = int(sys.argv[1])
+    print('The argument is:', arg)
+    train(num_episodes,ctrl_indx=arg)
