@@ -115,7 +115,7 @@ class Agent:
         actions = self.actor(torch.Tensor(observation).to(self.device))
         return actions.detach().cpu().numpy()
     
-    def getNoiseAction(self,observation:np.ndarray,variance:float=2.5):
+    def getNoiseAction(self,observation:np.ndarray,variance:float=1.5):
         deterministicAction = self.getDetAction(observation)
         std_dev = np.sqrt(variance)
         noise = np.random.normal(0,std_dev,deterministicAction.shape)

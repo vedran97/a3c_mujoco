@@ -1,7 +1,7 @@
 import csv
 import matplotlib.pyplot as plt
 
-filename = 'mujoco_a3c_joint_4_run_1.csv'
+filename = 'mujoco_a3c_joint_3_run_1.csv'
 
 # read the csv file
 with open(filename, 'r') as f:
@@ -19,7 +19,7 @@ with open(filename, 'r') as f:
 
 # plot the data
 plt.plot(column1, column3)
-plt.title('J4 tuning')
+plt.title('J3 tuning')
 plt.xlabel('Episodes')
 plt.ylabel('Total Reward')
 plt.show()

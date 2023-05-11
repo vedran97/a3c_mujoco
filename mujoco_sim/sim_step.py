@@ -7,9 +7,10 @@ import mujoco_py
 from circular_trajectory import *
 import sys
 num_episodes = 500
+
 # HYPERPARAMETERS BELOW
-gamma = 0.75  # discount factor for rewards
-learningRate = 1e-4  # learning rate for actor and critic networks ## j1, j2 = 2e-4
+gamma = 0.99  # discount factor for rewards j1 j2 j4 j5 = 0.75 j3 = 0.99
+learningRate = 1*1e-4  # learning rate for actor and critic networks ## j1, j2 = 2e-4,j3= 1*1e-4,j4=1e-4 j5=1e-4
 tau = 0.005  # tracking parameter used to update target networks slowly
 actionSigma = 0.1  # contributes noise to deterministic policy output
 trainingSigma = 0.2  # contributes noise to target actions
@@ -26,14 +27,17 @@ zero_epsilon = 1e-6
 ## initialize PID controllers
 INIT_GAINS = [[4859.5810546875,1.00020770332776e-06,8.67470932006836],
               [24239.791015625,9.863824743661098e-07,70.85529327392578],
-              [400,0+zero_epsilon,70],
-              [200,0+zero_epsilon,30],
-              [80,10,30],
+              [6586.26513671875,0.00024644457,42.62803649902344],
+              [560.6026611328125,10,11.472661018371582],
+              [199.86636352539062,5.589615821838379,28.542407989501953],
               [50,0+zero_epsilon,10]]
 ## effort clamp for J1 = 20
 ## Best learnt gains for J1 = 4859.5810546875,1.00020770332776e-06,8.67470932006836 ## Initial = 200,0+zero_epsilon,10
 ## Best learnt gains for J2 = 24239.791015625,9.863824743661098e-07,70.85529327392578 ## Initial = 800,0+zero_epsilon,100
-## Best learnt gains for J3 = 400,0+zero_epsilon,70 ## Initial = 400,0+zero_epsilon,70
+## Best learnt gains for J3 = 6586.26513671875,0.0002464445715304464,42.62803649902344 ## Initial = 400,0+zero_epsilon,70
+## Best learnt gains for J4 = 560.6026611328125,10,11.472661018371582 ## Initial = 200,0+zero_epsilon,30
+## Best learnt gains for J5 =  199.86636352539062,5.589615821838379,28.542407989501953 ## Initial = 80,10,30
+## J6 gains left unchanged
 ## J1 reward chosen to exit the RL = 0.29
 ## J2 reward chosen to exit the RL = 0.29 // exited before this because this is the best learnt reward
 J_REWARD_CUTOFF = 0.29
@@ -128,6 +132,7 @@ class PIDMujocoEnv:
         target_angle = self.traj[self.traj_index]
         ## current angle
         current_angles = self.sim.data.qpos[self.joint_ids]
+        k_p,k_i,k_d = INIT_GAINS[self.idx]
         if self.traj_index != 0:
             ## pid gains are weights of actor
             k_p,k_i,k_d = np.exp(agent.actor.weight.data.cpu().numpy()).tolist()
@@ -158,15 +163,17 @@ class PIDMujocoEnv:
         ## Apply step
         self.sim.step()
         ## Find RR 
-        # rr = np.sum(np.array(self.controller.tracking_errors)**2)
-        ## Apply supervisor logic
-        # if(rr>1.5*r_bench) and eval==False:
-        #     ## RESET PID CONTROLLER, RESET actor weight
-        #     print("\r\nSUPERVISOR ACTION\r\n")
-        #     p_bench,i_bench,d_bench = gains_bench
-        #     self.controller.set_gains(p_bench,i_bench,d_bench)
-        #     pid_controllers[self.idx] =self.controller
-        #     agent.actor = self.init_actor(agent.actor)
+        rr = np.sum(np.array(self.controller.tracking_errors)**2)
+        # Apply supervisor logic
+        super_visor_action = False
+        if(rr>3.0*r_bench) and eval==False:
+            ## RESET PID CONTROLLER, RESET actor weight
+            print("\r\nSUPERVISOR ACTION\r\n")
+            # p_bench,i_bench,d_bench = gains_bench
+            # self.controller.set_gains(p_bench,i_bench,d_bench)
+            # pid_controllers[self.idx] =self.controller
+            # agent.actor = self.init_actor(agent.actor)
+            super_visor_action=True
         ## Get specific controller's next state
         ## Get current angles for the joint of concern
         current_angle = self.sim.data.qpos[self.joint_ids][self.idx]
@@ -180,6 +187,10 @@ class PIDMujocoEnv:
             print("control was clamped")
             reward -= 100
             print('reward:',reward)
+        if k_d>=k_p/5:
+            reward -= 50
+        if super_visor_action:
+            reward -= 50
         # print("reward:",reward)
         ## Increment trajectory index
         self.traj_index+=1
@@ -207,7 +218,7 @@ class PIDMujocoEnv:
             ## get specific controller's state
             state = self.controller.get_state()
             ## get specific controller's action
-            action = agent.getNoiseAction(state)
+            action = agent.getDetAction(state)
             ## control effort is action,action is control effort
             control_effort[self.idx] = action
             ## apply control effort
@@ -247,7 +258,7 @@ def train(num_episodes=2,ctrl_indx = 2):
             # # choose an action from the agent's policy
             action = agent.getNoiseAction(state)
             # take a step in the environment and collect information
-            nextState, reward, done, _ = env.step(state,agent,gains_bench,r_bench,True)   ## literally take 1 step in the sim space.
+            nextState, reward, done, _ = env.step(state,agent,gains_bench,r_bench,False)   ## literally take 1 step in the sim space.
             # store data in buffer
             agent.buffer.store(state, action, reward, nextState, done)
 
