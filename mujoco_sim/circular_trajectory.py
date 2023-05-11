@@ -4,8 +4,6 @@ import sympy as sp
 import matplotlib.pyplot as plt
 from tqdm import *
 
-import time
-import sys
 
 
 symbols = sp.symbols
